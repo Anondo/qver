@@ -8,6 +8,7 @@ type Config struct {
 	Host    string
 	Port    int
 	TimeOut time.Duration
+	QName   string
 }
 
 func Configure(host string, port int, timeOut time.Duration) Config {

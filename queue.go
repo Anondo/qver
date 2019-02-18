@@ -9,28 +9,26 @@ import (
 	"time"
 )
 
-type JobReq struct {
-	Task  string        `json:"task"`
-	Args  []interface{} `json:"args"`
-	QName string        `json:"qname"`
+type QueueReq struct {
+	Name string `json:"name"`
+	Cap  int    `json:"cap"`
 }
 
-func (s *Server) Publish(sgntr Signature) error {
-	jr := JobReq{Task: sgntr.Name}
-
-	for _, arg := range sgntr.Args {
-		jr.Args = append(jr.Args, arg.Value)
+func (s *Server) DeclareQueue(n string, c int) error {
+	qr := QueueReq{
+		Name: n,
+		Cap:  c,
 	}
 
-	jr.QName = s.QName
-
-	byteRep, err := json.Marshal(jr)
+	byteRep, err := json.Marshal(qr)
 
 	if err != nil {
 		return err
 	}
 
-	uri := "http://" + s.Host + ":" + strconv.Itoa(s.Port) + "/api/v1/goqueue/"
+	s.QName = qr.Name
+
+	uri := "http://" + s.Host + ":" + strconv.Itoa(s.Port) + "/api/v1/goqueue/queue"
 	req, erR := http.NewRequest(http.MethodPost, uri, bytes.NewBuffer(byteRep))
 	if erR != nil {
 		return erR
@@ -46,5 +44,4 @@ func (s *Server) Publish(sgntr Signature) error {
 	}
 
 	return nil
-
 }
