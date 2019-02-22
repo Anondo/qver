@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -40,7 +41,7 @@ func (s *Server) DeclareQueue(n string, c int) error {
 	req = req.WithContext(ctx)
 	_, err = client.Do(req)
 	if err != nil {
-		return err
+		return errors.New("\033[31m" + "GoQueue server not working" + "\033[0m")
 	}
 
 	return nil
