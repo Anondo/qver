@@ -43,9 +43,6 @@ func (w *Worker) Fetch() error {
 		return err
 	}
 
-	// wg := sync.WaitGroup{}
-	// wg.Add(w.Concurrency)
-
 	c := http.Client{}
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGKILL, syscall.SIGINT, syscall.SIGQUIT)
@@ -74,7 +71,6 @@ func (w *Worker) Fetch() error {
 				}
 
 			}
-			// wg.Done()
 		}(i + 1)
 
 	}
@@ -87,10 +83,9 @@ func (w *Worker) Fetch() error {
 	log.Println("Press Ctrl+C to exit")
 	fmt.Println("\033[0m")
 
-	// wg.Wait()
 	<-stop
 
-	log.Println("\033[0m", "Worker(s) died gracefully!!", "\033[0m")
+	log.Println("\033[31m", "Worker(s) died gracefully!!", "\033[0m")
 
 	return nil
 }
@@ -129,7 +124,8 @@ func (w *Worker) TriggerJob(jn, wn string, f interface{}, args ...interface{}) e
 	}
 
 	fmt.Println("\033[35m")
-	log.Printf("Job Triggered: {by:%s , job:%s , arguments:%v}", wn, jn, args)
+	log.Printf("Job Triggered: {by:%s , job:%s , arguments:%v}\n", wn, jn, args)
+	log.Print("Processing results...")
 	fmt.Println("\033[0m")
 
 	results := rv.Call(arguments)
