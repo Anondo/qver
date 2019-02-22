@@ -10,19 +10,23 @@ import (
 )
 
 type JobReq struct {
-	Task  string        `json:"task"`
-	Args  []interface{} `json:"args"`
-	QName string        `json:"qname"`
+	Task  string      `json:"task"`
+	Args  []Arguments `json:"args"`
+	QName string      `json:"qname"`
 }
 
 func (s *Server) Publish(sgntr Signature) error {
-	jr := JobReq{Task: sgntr.Name}
-
-	for _, arg := range sgntr.Args {
-		jr.Args = append(jr.Args, arg.Value)
+	jr := JobReq{
+		Task:  sgntr.Name,
+		Args:  sgntr.Args,
+		QName: s.QName,
 	}
 
-	jr.QName = s.QName
+	// for _, arg := range sgntr.Args {
+	// 	jr.Args = append(jr.Args, arg.Value)
+	// }
+
+	// jr.QName = s.QName
 
 	byteRep, err := json.Marshal(jr)
 

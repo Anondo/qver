@@ -24,9 +24,9 @@ type Worker struct {
 }
 
 type JobResponse struct {
-	ID      int           `json:"id"`
-	JobName string        `json:"job_name"`
-	Args    []interface{} `json:"args"`
+	ID      int         `json:"id"`
+	JobName string      `json:"job_name"`
+	Args    []Arguments `json:"args"`
 }
 
 func (w *Worker) Fetch() error {
@@ -62,9 +62,20 @@ func (w *Worker) Fetch() error {
 
 				task := w.Srvr.GetTaskByName(jr.JobName)
 				if task != nil {
+					args := []interface{}{}
+					for _, a := range jr.Args {
+						switch a.Type {
+						case Int, Int8, Int16, Int32, Int64: //this is done because interface if unmarshaled becomes float64,
+							args = append(args, int(a.Value.(float64)))
+						case UInt, UInt8, UInt16, UInt32, UInt64:
+							args = append(args, int(a.Value.(float64)))
+						default:
+							args = append(args, a.Value)
+						}
+					}
 					wn := w.Name + ":" + strconv.Itoa(worker)
-					if err := w.TriggerJob(jr.JobName, wn, task, jr.Args...); err != nil {
-						log.Fatal("\033[31m", err, "\033[0m")
+					if err := w.TriggerJob(jr.JobName, wn, task, args...); err != nil {
+						log.Println("\033[31m", err, "\033[0m")
 					}
 				} else {
 					log.Println("\033[31m", "Unregistererd Task", "\033[0m")
@@ -118,7 +129,7 @@ func (w *Worker) TriggerJob(jn, wn string, f interface{}, args ...interface{}) e
 
 	for i, arg := range args {
 		if reflect.TypeOf(arg) != rt.In(i) {
-			return fmt.Errorf("Argument Type Mismatch: Expected %v, Got %v", rt.In(i), reflect.ValueOf(arg))
+			return fmt.Errorf("Argument Type Mismatch: Expected %v, Got %v", rt.In(i), reflect.ValueOf(arg).Kind())
 		}
 		arguments = append(arguments, reflect.ValueOf(arg))
 	}
@@ -128,9 +139,26 @@ func (w *Worker) TriggerJob(jn, wn string, f interface{}, args ...interface{}) e
 	log.Print("Processing results...")
 	fmt.Println("\033[0m")
 
-	results := rv.Call(arguments)
+	resVal := rv.Call(arguments)
+	results := []interface{}{} //just for keeping the results in a slice to display
 
-	log.Printf("Results:%v", results)
+	for _, v := range resVal {
+		switch v.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			results = append(results, int(v.Int()))
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			results = append(results, int(v.Int()))
+		case reflect.Float32, reflect.Float64:
+			results = append(results, v.Float())
+		case reflect.Bool:
+			results = append(results, v.Bool())
+		default:
+			results = append(results, v)
+
+		}
+	}
+
+	log.Printf("Results:%v\n", results)
 
 	return nil
 }
