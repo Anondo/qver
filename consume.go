@@ -110,9 +110,48 @@ func (s *Server) NewWorker(name string, concurrency, port int) *Worker {
 	}
 }
 
+type RegTaskReq struct {
+	TaskNames []string `json:"task_names"`
+	QName     string   `json:"qname"`
+}
+
 func (s *Server) RegisterTasks(namedTasks map[string]interface{}) error {
 
 	s.RegisteredTasks = namedTasks
+
+	tns := []string{}
+	for k, _ := range namedTasks {
+		tns = append(tns, k)
+	}
+
+	rtr := RegTaskReq{
+		TaskNames: tns,
+		QName:     s.QName,
+	}
+
+	b, err := json.Marshal(rtr)
+
+	if err != nil {
+		return err
+	}
+
+	uri := "http://" + s.Host + ":" + strconv.Itoa(s.Port) + "/api/v1/goqueue/task/register"
+	req, err := http.NewRequest(http.MethodPost, uri, bytes.NewBuffer(b))
+
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	req = req.WithContext(ctx)
+
+	c := http.Client{}
+	_, err = c.Do(req)
+
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
