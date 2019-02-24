@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
-	"time"
 )
 
 type JobReq struct {
@@ -41,7 +40,7 @@ func (s *Server) Publish(sgntr Signature) error {
 	}
 
 	client := http.Client{}
-	ctx, cancel := context.WithTimeout(context.Background(), s.TimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), s.TimeOut)
 	defer cancel()
 	req = req.WithContext(ctx)
 	_, err = client.Do(req)
