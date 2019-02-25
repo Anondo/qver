@@ -11,14 +11,16 @@ import (
 )
 
 type QueueReq struct {
-	Name string `json:"name"`
-	Cap  int    `json:"cap"`
+	Name    string `json:"name"`
+	Cap     int    `json:"cap"`
+	Durable bool   `json:"durable"`
 }
 
-func (s *Server) DeclareQueue(n string, c int) error {
+func (s *Server) DeclareQueue(n string, c int, d bool) error {
 	qr := QueueReq{
-		Name: n,
-		Cap:  c,
+		Name:    n,
+		Cap:     c,
+		Durable: d,
 	}
 
 	byteRep, err := json.Marshal(qr)
