@@ -60,6 +60,10 @@ func (w *Worker) Fetch() error {
 
 				json.NewDecoder(resp.Body).Decode(&jr)
 
+				if jr.JobName == "" {
+					log.Fatalln("\033[31m", "GoQueue server failed to connect with:"+w.Name, "\033[0m")
+				}
+
 				task := w.Srvr.GetTaskByName(jr.JobName)
 				if task != nil {
 					args := []interface{}{}
