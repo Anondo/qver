@@ -10,14 +10,16 @@ import (
 	"time"
 )
 
-type QueueReq struct {
+// qqueueReq is the request to the goqueue server for declaring a new queue
+type queueReq struct {
 	Name    string `json:"name"`
 	Cap     int    `json:"cap"`
 	Durable bool   `json:"durable"`
 }
 
+// DeclareQueue creates a new queue on the goqueue server
 func (s *Server) DeclareQueue(n string, c int, d bool) error {
-	qr := QueueReq{
+	qr := queueReq{
 		Name:    n,
 		Cap:     c,
 		Durable: d,

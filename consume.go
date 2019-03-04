@@ -16,6 +16,7 @@ import (
 	"time"
 )
 
+// Worker consumes tasks
 type Worker struct {
 	Name        string
 	Concurrency int
@@ -23,15 +24,18 @@ type Worker struct {
 	Srvr        *Server
 }
 
-type JobResponse struct {
+// jobResponse is the response sent by the goqueue server
+type jobResponse struct {
 	ID      int         `json:"id"`
 	JobName string      `json:"job_name"`
 	Args    []Arguments `json:"args"`
 }
 
+// Fetch prepares the workers for fetching tasks. It starts the worker server, spawns them, and makes them
+//request for tasks to the goqueue server
 func (w *Worker) Fetch() error {
 
-	go w.StartWorkerServer()
+	go w.startWorkerServer()
 
 	time.Sleep(1 * time.Second)
 
@@ -56,7 +60,7 @@ func (w *Worker) Fetch() error {
 					log.Fatal("\033[31m", "GOQueue server has stopped", "\033[0m")
 				}
 
-				jr := JobResponse{}
+				jr := jobResponse{}
 
 				json.NewDecoder(resp.Body).Decode(&jr)
 
@@ -64,7 +68,7 @@ func (w *Worker) Fetch() error {
 					log.Fatalln("\033[31m", "GoQueue server failed to connect with:"+w.Name, "\033[0m")
 				}
 
-				task := w.Srvr.GetTaskByName(jr.JobName)
+				task := w.Srvr.getTaskByName(jr.JobName)
 				if task != nil {
 					args := []interface{}{}
 					for _, a := range jr.Args {
@@ -78,7 +82,7 @@ func (w *Worker) Fetch() error {
 						}
 					}
 					wn := w.Name + ":" + strconv.Itoa(worker)
-					if err := w.TriggerJob(jr.JobName, wn, task, args...); err != nil {
+					if err := w.triggerJob(jr.JobName, wn, task, args...); err != nil {
 						log.Println("\033[31m", err, "\033[0m")
 					}
 				} else {
@@ -105,6 +109,7 @@ func (w *Worker) Fetch() error {
 	return nil
 }
 
+// NewWorker returns a new Worker pointer
 func (s *Server) NewWorker(name string, concurrency, port int) *Worker {
 	return &Worker{
 		Name:        name,
@@ -114,11 +119,14 @@ func (s *Server) NewWorker(name string, concurrency, port int) *Worker {
 	}
 }
 
-type RegTaskReq struct {
+// regTaskReq is the request for task registration to the goqueue server
+type regTaskReq struct {
 	TaskNames []string `json:"task_names"`
 	QName     string   `json:"qname"`
 }
 
+// RegisterTasks register tasks for the current consumer. Registers it locally and makes
+// a request to the goqueue server for registering as well.
 func (s *Server) RegisterTasks(namedTasks map[string]interface{}) error {
 
 	s.RegisteredTasks = namedTasks
@@ -128,7 +136,7 @@ func (s *Server) RegisterTasks(namedTasks map[string]interface{}) error {
 		tns = append(tns, k)
 	}
 
-	rtr := RegTaskReq{
+	rtr := regTaskReq{
 		TaskNames: tns,
 		QName:     s.QName,
 	}
@@ -160,7 +168,8 @@ func (s *Server) RegisterTasks(namedTasks map[string]interface{}) error {
 	return nil
 }
 
-func (w *Worker) TriggerJob(jn, wn string, f interface{}, args ...interface{}) error {
+// triggerJob validates a job & triggers it
+func (w *Worker) triggerJob(jn, wn string, f interface{}, args ...interface{}) error {
 
 	rv := reflect.ValueOf(f)
 	rt := reflect.TypeOf(f)
@@ -206,15 +215,17 @@ func (w *Worker) TriggerJob(jn, wn string, f interface{}, args ...interface{}) e
 	return nil
 }
 
-type SubsReq struct {
+// susubsReq is the subscribe request for consumer to the goqueue server
+type subsReq struct {
 	Name  string `json:"name"`
 	Port  int    `json:"port"`
 	QName string `json:"qname"`
 }
 
-func (w *Worker) Subscribe() error {
+// subscribe subscribes a consumer with the goqueue server
+func (w *Worker) subscribe() error {
 
-	s := SubsReq{
+	s := subsReq{
 		Name:  w.Name,
 		Port:  w.Port,
 		QName: w.Srvr.QName,
@@ -245,15 +256,16 @@ func (w *Worker) Subscribe() error {
 	return err
 }
 
-type Acknowledgement struct {
+type acknowledgement struct {
 	Ack bool `json:"ack"`
 }
 
-func (w *Worker) StartWorkerServer() error {
-	w.Subscribe()
+// startWorkerServer doest exactly what it's name suggests, starts the worker server
+func (w *Worker) startWorkerServer() error {
+	w.subscribe()
 
 	fmt.Println("Workers spawning...")
-	http.HandleFunc("/worker/acknowledge", w.AcknowledgeHandler)
+	http.HandleFunc("/worker/acknowledge", w.acknowledgeHandler)
 	if err := http.ListenAndServe(":"+strconv.Itoa(w.Port), nil); err != nil {
 		return err
 	}
@@ -261,10 +273,12 @@ func (w *Worker) StartWorkerServer() error {
 	return nil
 }
 
-func (w *Worker) AcknowledgeHandler(rw http.ResponseWriter, r *http.Request) {
+// acknowledgeHanlder is the http handler for dealing with acacknowledgement reqeusts
+// from the goqueue server
+func (w *Worker) acknowledgeHandler(rw http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
-		a := Acknowledgement{true}
+		a := acknowledgement{true}
 		b, err := json.Marshal(a)
 
 		if err != nil {

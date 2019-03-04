@@ -8,14 +8,16 @@ import (
 	"strconv"
 )
 
-type JobReq struct {
+// jobReq is the request to the goqueue server for publishing a job
+type jobReq struct {
 	Task  string      `json:"task"`
 	Args  []Arguments `json:"args"`
 	QName string      `json:"qname"`
 }
 
+// Publish publishes a job signature to the goqueue server
 func (s *Server) Publish(sgntr Signature) error {
-	jr := JobReq{
+	jr := jobReq{
 		Task:  sgntr.Name,
 		Args:  sgntr.Args,
 		QName: s.QName,
