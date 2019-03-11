@@ -12,17 +12,19 @@ import (
 
 // qqueueReq is the request to the goqueue server for declaring a new queue
 type queueReq struct {
-	Name    string `json:"name"`
-	Cap     int    `json:"cap"`
-	Durable bool   `json:"durable"`
+	Name    string        `json:"name"`
+	Cap     int           `json:"cap"`
+	Durable bool          `json:"durable"`
+	AckWait time.Duration `json:"ack_wait"`
 }
 
 // DeclareQueue creates a new queue on the goqueue server
-func (s *Server) DeclareQueue(n string, c int, d bool) error {
+func (s *Server) DeclareQueue(n string, c int, d bool, at time.Duration) error {
 	qr := queueReq{
 		Name:    n,
 		Cap:     c,
 		Durable: d,
+		AckWait: at,
 	}
 
 	byteRep, err := json.Marshal(qr)

@@ -35,7 +35,13 @@ type jobResponse struct {
 //request for tasks to the goqueue server
 func (w *Worker) Fetch() error {
 
-	go w.startWorkerServer()
+	// go w.startWorkerServer()
+
+	if err := w.subscribe(); err != nil {
+		return err
+	}
+
+	fmt.Println("Workers spawning...")
 
 	time.Sleep(1 * time.Second)
 
@@ -212,6 +218,10 @@ func (w *Worker) triggerJob(jn, wn string, f interface{}, args ...interface{}) e
 
 	log.Printf("Results:%v\n", results)
 
+	if err := w.sendAck(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -257,34 +267,68 @@ func (w *Worker) subscribe() error {
 }
 
 type acknowledgement struct {
-	Ack bool `json:"ack"`
+	Ack        bool   `json:"ack"`
+	Qname      string `json:"qname"`
+	Subscriber string `json:"subscriber"`
 }
 
-// startWorkerServer doest exactly what it's name suggests, starts the worker server
-func (w *Worker) startWorkerServer() error {
-	w.subscribe()
+func (w *Worker) sendAck() error {
+	a := acknowledgement{
+		Ack:        true,
+		Qname:      w.Srvr.QName,
+		Subscriber: w.Name,
+	}
+	b, err := json.Marshal(a)
 
-	fmt.Println("Workers spawning...")
-	http.HandleFunc("/worker/acknowledge", w.acknowledgeHandler)
-	if err := http.ListenAndServe(":"+strconv.Itoa(w.Port), nil); err != nil {
+	if err != nil {
 		return err
 	}
 
-	return nil
+	uri := "http://" + w.Srvr.Host + ":" + strconv.Itoa(w.Srvr.Port) + "/api/v1/goqueue/task/acknowledge"
+	req, erR := http.NewRequest(http.MethodPost, uri, bytes.NewBuffer(b))
+
+	if err != nil {
+		return erR
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+
+	defer cancel()
+
+	req = req.WithContext(ctx)
+
+	c := http.Client{}
+	_, err = c.Do(req)
+
+	return err
+
 }
+
+// startWorkerServer doest exactly what it's name suggests, starts the worker server
+// func (w *Worker) startWorkerServer() error {
+// 	w.subscribe()
+//
+// 	fmt.Println("Workers spawning...")
+// 	http.HandleFunc("/worker/acknowledge", w.acknowledgeHandler)
+// 	if err := http.ListenAndServe(":"+strconv.Itoa(w.Port), nil); err != nil {
+// 		return err
+// 	}
+//
+// 	return nil
+// }
 
 // acknowledgeHanlder is the http handler for dealing with acacknowledgement reqeusts
 // from the goqueue server
-func (w *Worker) acknowledgeHandler(rw http.ResponseWriter, r *http.Request) {
-
-	if r.Method == http.MethodGet {
-		a := acknowledgement{true}
-		b, err := json.Marshal(a)
-
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Fprintf(rw, "%s", string(b))
-	}
-
-}
+// func (w *Worker) acknowledgeHandler(rw http.ResponseWriter, r *http.Request) {
+//
+// 	if r.Method == http.MethodGet {
+// 		a := acknowledgement{true}
+// 		b, err := json.Marshal(a)
+//
+// 		if err != nil {
+// 			log.Fatal(err)
+// 		}
+// 		fmt.Fprintf(rw, "%s", string(b))
+// 	}
+//
+// }
