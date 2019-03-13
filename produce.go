@@ -23,12 +23,6 @@ func (s *Server) Publish(sgntr Signature) error {
 		QName: s.QName,
 	}
 
-	// for _, arg := range sgntr.Args {
-	// 	jr.Args = append(jr.Args, arg.Value)
-	// }
-
-	// jr.QName = s.QName
-
 	byteRep, err := json.Marshal(jr)
 
 	if err != nil {

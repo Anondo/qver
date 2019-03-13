@@ -35,15 +35,13 @@ type jobResponse struct {
 //request for tasks to the goqueue server
 func (w *Worker) Fetch() error {
 
-	// go w.startWorkerServer()
-
 	if err := w.subscribe(); err != nil {
 		return err
 	}
 
 	fmt.Println("Workers spawning...")
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(1 * time.Second) // TODO: not sure if this is needed
 
 	uri := "http://" + w.Srvr.Host + ":" + strconv.Itoa(w.Srvr.Port) + "/api/v1/goqueue/" + "queue/" + w.Srvr.QName +
 		"?sname=" + w.Name
@@ -266,14 +264,16 @@ func (w *Worker) subscribe() error {
 	return err
 }
 
-type acknowledgement struct {
+// acacknowledgementRequest is the request payload for acknowledgement
+type acknowledgementRequest struct {
 	Ack        bool   `json:"ack"`
 	Qname      string `json:"qname"`
 	Subscriber string `json:"subscriber"`
 }
 
+// sendAck is the method to send acknowledgement to the goqueue server
 func (w *Worker) sendAck() error {
-	a := acknowledgement{
+	a := acknowledgementRequest{
 		Ack:        true,
 		Qname:      w.Srvr.QName,
 		Subscriber: w.Name,
@@ -303,32 +303,3 @@ func (w *Worker) sendAck() error {
 	return err
 
 }
-
-// startWorkerServer doest exactly what it's name suggests, starts the worker server
-// func (w *Worker) startWorkerServer() error {
-// 	w.subscribe()
-//
-// 	fmt.Println("Workers spawning...")
-// 	http.HandleFunc("/worker/acknowledge", w.acknowledgeHandler)
-// 	if err := http.ListenAndServe(":"+strconv.Itoa(w.Port), nil); err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
-
-// acknowledgeHanlder is the http handler for dealing with acacknowledgement reqeusts
-// from the goqueue server
-// func (w *Worker) acknowledgeHandler(rw http.ResponseWriter, r *http.Request) {
-//
-// 	if r.Method == http.MethodGet {
-// 		a := acknowledgement{true}
-// 		b, err := json.Marshal(a)
-//
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		fmt.Fprintf(rw, "%s", string(b))
-// 	}
-//
-// }
