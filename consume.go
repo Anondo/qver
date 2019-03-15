@@ -20,7 +20,6 @@ import (
 type Worker struct {
 	Name        string
 	Concurrency int
-	Port        int
 	Srvr        *Server
 }
 
@@ -114,11 +113,10 @@ func (w *Worker) Fetch() error {
 }
 
 // NewWorker returns a new Worker pointer
-func (s *Server) NewWorker(name string, concurrency, port int) *Worker {
+func (s *Server) NewWorker(name string, concurrency int) *Worker {
 	return &Worker{
 		Name:        name,
 		Concurrency: concurrency,
-		Port:        port,
 		Srvr:        s,
 	}
 }
@@ -226,7 +224,6 @@ func (w *Worker) triggerJob(jn, wn string, f interface{}, args ...interface{}) e
 // susubsReq is the subscribe request for consumer to the goqueue server
 type subsReq struct {
 	Name  string `json:"name"`
-	Port  int    `json:"port"`
 	QName string `json:"qname"`
 }
 
@@ -235,7 +232,6 @@ func (w *Worker) subscribe() error {
 
 	s := subsReq{
 		Name:  w.Name,
-		Port:  w.Port,
 		QName: w.Srvr.QName,
 	}
 
