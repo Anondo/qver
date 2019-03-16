@@ -1,5 +1,6 @@
 package qver
 
+// The datatypes supported by qver
 const (
 	Int    = "int"
 	Int8   = "int8"
@@ -15,7 +16,7 @@ const (
 	String = "string"
 )
 
-// Arugments is the argument for the task to be published
+// Arguments is the argument for the task to be published
 type Arguments struct {
 	Value interface{} `json:"value"`
 	Type  string      `json:"type"`

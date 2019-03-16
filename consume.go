@@ -134,7 +134,7 @@ func (s *Server) RegisterTasks(namedTasks map[string]interface{}) error {
 	s.RegisteredTasks = namedTasks
 
 	tns := []string{}
-	for k, _ := range namedTasks {
+	for k := range namedTasks {
 		tns = append(tns, k)
 	}
 
