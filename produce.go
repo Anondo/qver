@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 )
@@ -41,7 +42,7 @@ func (s *Server) Publish(sgntr Signature) error {
 	req = req.WithContext(ctx)
 	_, err = client.Do(req)
 	if err != nil {
-		return err
+		return errors.New("The queue:" + s.QName + " is currently busy")
 	}
 
 	return nil
