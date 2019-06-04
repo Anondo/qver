@@ -34,6 +34,12 @@ type jobResponse struct {
 //request for tasks to the goqueue server
 func (w *Worker) Fetch() error {
 
+	if w.Srvr.ResultsBackend != nil {
+		if err := w.Srvr.ResultsBackend.connect(); err != nil {
+			log.Println("\033[31m", err, "\033[0m")
+		}
+	}
+
 	if err := w.subscribe(); err != nil {
 		return err
 	}
@@ -85,7 +91,7 @@ func (w *Worker) Fetch() error {
 						}
 					}
 					wn := w.Name + ":" + strconv.Itoa(worker)
-					if err := w.triggerJob(jr.JobName, wn, task, args...); err != nil {
+					if err := w.triggerJob(jr, wn, task, args...); err != nil {
 						log.Println("\033[31m", err, "\033[0m")
 					}
 				} else {
@@ -171,7 +177,7 @@ func (s *Server) RegisterTasks(namedTasks map[string]interface{}) error {
 }
 
 // triggerJob validates a job & triggers it
-func (w *Worker) triggerJob(jn, wn string, f interface{}, args ...interface{}) error {
+func (w *Worker) triggerJob(jr jobResponse, wn string, f interface{}, args ...interface{}) error {
 
 	rv := reflect.ValueOf(f)
 	rt := reflect.TypeOf(f)
@@ -189,7 +195,7 @@ func (w *Worker) triggerJob(jn, wn string, f interface{}, args ...interface{}) e
 	}
 
 	fmt.Println("\033[35m")
-	log.Printf("Job Triggered: {by:%s , job:%s , arguments:%v}\n", wn, jn, args)
+	log.Printf("Job Triggered: {by:%s , job:%s , arguments:%v}\n", wn, jr.JobName, args)
 	log.Print("Processing results...")
 	fmt.Println("\033[0m")
 
@@ -216,6 +222,12 @@ func (w *Worker) triggerJob(jn, wn string, f interface{}, args ...interface{}) e
 
 	if err := w.sendAck(); err != nil {
 		return err
+	}
+
+	if w.Srvr.ResultsBackend != nil {
+		if err := w.Srvr.ResultsBackend.store(jr, results); err != nil {
+			return err
+		}
 	}
 
 	return nil
