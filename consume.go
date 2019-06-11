@@ -36,7 +36,7 @@ func (w *Worker) Fetch() error {
 
 	if w.Srvr.ResultsBackend != nil {
 		if err := w.Srvr.ResultsBackend.connect(); err != nil {
-			log.Println("\033[31m", err, "\033[0m")
+			return err
 		}
 	}
 
