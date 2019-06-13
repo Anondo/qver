@@ -3,6 +3,7 @@ package qver
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -61,7 +62,15 @@ func (w *Worker) Fetch() error {
 		return err
 	}
 
-	c := http.Client{}
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
+	}
+
+	c := http.Client{
+		Transport: tr,
+	}
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGKILL, syscall.SIGINT, syscall.SIGQUIT)
 
@@ -71,8 +80,10 @@ func (w *Worker) Fetch() error {
 				resp, err := c.Do(req)
 
 				if err != nil {
-					log.Fatal("\033[31m", "GOQueue server has stopped", "\033[0m")
+					log.Fatal("\033[31m", "GOQueue server has stopped: "+err.Error(), "\033[0m")
 				}
+
+				fmt.Printf("Worker:%d ok", worker)
 
 				jr := jobResponse{}
 
@@ -117,6 +128,10 @@ func (w *Worker) Fetch() error {
 	fmt.Println("\033[0m")
 
 	<-stop
+
+	if err := w.unsubscribe(); err != nil {
+		return err
+	}
 
 	log.Println("\033[31m", "Worker(s) died gracefully!!", "\033[0m")
 
@@ -262,6 +277,39 @@ func (w *Worker) subscribe() error {
 
 	uri := "http://" + w.Srvr.Host + ":" + strconv.Itoa(w.Srvr.Port) + "/api/v1/goqueue/subscribe"
 	req, erR := http.NewRequest(http.MethodPost, uri, bytes.NewBuffer(b))
+
+	if err != nil {
+		return erR
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), w.Srvr.TimeOut)
+
+	defer cancel()
+
+	req = req.WithContext(ctx)
+
+	c := http.Client{}
+	_, err = c.Do(req)
+
+	return err
+}
+
+func (w *Worker) unsubscribe() error {
+
+	s := subsReq{
+		ID:    w.id,
+		Name:  w.Name,
+		QName: w.Srvr.QName,
+	}
+
+	b, err := json.Marshal(s)
+
+	if err != nil {
+		return err
+	}
+
+	uri := "http://" + w.Srvr.Host + ":" + strconv.Itoa(w.Srvr.Port) + "/api/v1/goqueue/unsubscribe"
+	req, erR := http.NewRequest(http.MethodDelete, uri, bytes.NewBuffer(b))
 
 	if err != nil {
 		return erR
