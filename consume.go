@@ -14,10 +14,13 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	uuid "github.com/satori/go.uuid"
 )
 
 // Worker consumes tasks
 type Worker struct {
+	id          string
 	Name        string
 	Concurrency int
 	Srvr        *Server
@@ -33,6 +36,8 @@ type jobResponse struct {
 // Fetch prepares the workers for fetching tasks. It starts the worker server, spawns them, and makes them
 //request for tasks to the goqueue server
 func (w *Worker) Fetch() error {
+
+	w.generateUUID() // populate the id field of the worker by generating a uuid
 
 	if w.Srvr.ResultsBackend != nil {
 		if err := w.Srvr.ResultsBackend.connect(); err != nil {
@@ -235,6 +240,7 @@ func (w *Worker) triggerJob(jr jobResponse, wn string, f interface{}, args ...in
 
 // susubsReq is the subscribe request for consumer to the goqueue server
 type subsReq struct {
+	ID    string `json:"id"`
 	Name  string `json:"name"`
 	QName string `json:"qname"`
 }
@@ -243,6 +249,7 @@ type subsReq struct {
 func (w *Worker) subscribe() error {
 
 	s := subsReq{
+		ID:    w.id,
 		Name:  w.Name,
 		QName: w.Srvr.QName,
 	}
@@ -310,4 +317,8 @@ func (w *Worker) sendAck() error {
 
 	return err
 
+}
+
+func (w *Worker) generateUUID() {
+	w.id = uuid.Must(uuid.NewV4()).String()
 }
