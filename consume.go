@@ -80,10 +80,8 @@ func (w *Worker) Fetch() error {
 				resp, err := c.Do(req)
 
 				if err != nil {
-					log.Fatal("\033[31m", "GOQueue server has stopped: "+err.Error(), "\033[0m")
+					log.Fatal("\033[31m", "Something is wrong with the GOQueue server: "+err.Error(), "\033[0m")
 				}
-
-				fmt.Printf("Worker:%d ok", worker)
 
 				jr := jobResponse{}
 
